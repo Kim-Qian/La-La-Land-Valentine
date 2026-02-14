@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Valentine's Day - Blue Hour Magic</title>
+    <style>
+        /* Modern reset and base styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0b0b2e; /* Fallback */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* La La Land Blue Hour Gradient */
+        .sky {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                #0b0b2e 0%, 
+                #1a1a4a 30%, 
+                #4b306b 60%, 
+                #8b4c70 85%, 
+                #d87a7a 100%);
+            z-index: 1;
+        }
+
+        /* Stars container */
+        #stars-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        /* Fireworks container */
+        #fireworks-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 3;
+            cursor: pointer;
+        }
+
+        /* Silhouette of the hill and the couple */
+        .silhouette {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none; /* Let clicks pass through to firework canvas */
+        }
+
+        /* UI Elements */
+        .content {
+            position: absolute;
+            top: 15%;
+            width: 100%;
+            text-align: center;
+            z-index: 5;
+            color: white;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 5px;
+            font-weight: 300;
+            text-transform: uppercase;
+            animation: fadeIn 3s ease-in;
+        }
+
+        p {
+            font-size: 1.2rem;
+            font-style: italic;
+            opacity: 0.8;
+            animation: fadeIn 5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            p { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sky"></div>
+    
+    <canvas id="stars-canvas"></canvas>
+    <canvas id="fireworks-canvas"></canvas>
+
+    <div class="content">
+        <h1>Happy Valentine's Day</h1>
+        <p>"Here's to the fools who dream, crazy as they may look."</p>
+    </div>
+
+    <!-- Silhouette using SVG for precision -->
+    <svg class="silhouette" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMax slice">
+        <!-- The Cliff/Hill -->
+        <path d="M0,600 L0,550 Q250,520 500,560 T1000,530 L1000,600 Z" fill="#050515" />
+        
+        <!-- The Couple (Simplified silhouettes) -->
+        <g transform="translate(480, 545) scale(0.6)">
+            <!-- Person 1 (Mia-like) -->
+            <path d="M0,0 Q-5,-15 0,-30 Q5,-35 10,-30 Q15,-15 10,0 Z" fill="#050515" />
+            <!-- Person 2 (Sebastian-like) -->
+            <path d="M25,0 Q20,-15 25,-30 Q30,-35 35,-30 Q40,-15 35,0 Z" fill="#050515" />
+            <!-- Sitting base -->
+            <path d="M-10,0 L45,0 Q45,10 17,10 Q-10,10 -10,0 Z" fill="#050515" />
+        </g>
+    </svg>
+
+    <script>
+        /**
+         * INITIALIZATION & SETUP
+         */
+        const fireCanvas = document.getElementById('fireworks-canvas');
+        const fireCtx = fireCanvas.getContext('2d');
+        const starCanvas = document.getElementById('stars-canvas');
+        const starCtx = starCanvas.getContext('2d');
+
+        let width, height;
+        const fireworks = [];
+        const particles = [];
+        const stars = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            fireCanvas.width = width;
+            fireCanvas.height = height;
+            starCanvas.width = width;
+            starCanvas.height = height;
+            initStars();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        /**
+         * STAR BACKGROUND
+         */
+        function initStars() {
+            stars.length = 0;
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height * 0.7, // Only in upper sky
+                    size: Math.random() * 1.5,
+                    opacity: Math.random(),
+                    speed: 0.01 + Math.random() * 0.02
+                });
+            }
+        }
+
+        function drawStars() {
+            starCtx.clearRect(0, 0, width, height);
+            stars.forEach(s => {
+                s.opacity += s.speed;
+                if (s.opacity > 1 || s.opacity < 0.2) s.speed = -s.speed;
+                starCtx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
+                starCtx.beginPath();
+                starCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                starCtx.fill();
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        /**
+         * FIREWORKS SYSTEM
+         */
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 8,
+                    y: (Math.random() - 0.5) * 8
+                };
+                this.alpha = 1;
+                this.friction = 0.95;
+                this.gravity = 0.15;
+            }
+
+            draw() {
+                fireCtx.save();
+                fireCtx.globalAlpha = this.alpha;
+                fireCtx.beginPath();
+                fireCtx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                fireCtx.fillStyle = this.color;
+                fireCtx.fill();
+                fireCtx.restore();
+            }
+
+            update() {
+                this.velocity.x *= this.friction;
+                this.velocity.y *= this.friction;
+                this.velocity.y += this.gravity;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= 0.01;
+            }
+        }
+
+        class Firework {
+            constructor(x, targetY, color) {
+                this.x = x;
+                this.y = height;
+                this.targetY = targetY;
+                this.color = color;
+                this.velocity = { x: (Math.random() - 0.5) * 2, y: -12 };
+                this.alive = true;
+            }
+
+            draw() {
+                fireCtx.beginPath();
+                fireCtx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                fireCtx.fillStyle = this.color;
+                fireCtx.fill();
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.velocity.y += 0.1; // gravity
+
+                if (this.velocity.y >= 0 || this.y <= this.targetY) {
+                    this.explode();
+                    this.alive = false;
+                }
+            }
+
+            explode() {
+                const particleCount = 60 + Math.floor(Math.random() * 40);
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle(this.x, this.y, this.color));
+                }
+            }
+        }
+
+        function animate() {
+            // Semi-transparent clear to create trail effect
+            fireCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            fireCtx.globalCompositeOperation = 'destination-out';
+            fireCtx.fillRect(0, 0, width, height);
+            
+            fireCtx.globalCompositeOperation = 'lighter';
+
+            fireworks.forEach((fw, index) => {
+                fw.update();
+                fw.draw();
+                if (!fw.alive) fireworks.splice(index, 1);
+            });
+
+            particles.forEach((p, index) => {
+                if (p.alpha > 0) {
+                    p.update();
+                    p.draw();
+                } else {
+                    particles.splice(index, 1);
+                }
+            });
+
+            // Random automatic fireworks
+            if (Math.random() < 0.02) {
+                createFirework();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function createFirework(x, y) {
+            const colors = ['#ff4d4d', '#ffeb3b', '#4caf50', '#2196f3', '#e91e63', '#ffffff', '#ff9800'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const targetX = x || Math.random() * width;
+            const targetY = y || Math.random() * (height * 0.5);
+            fireworks.push(new Firework(targetX, targetY, color));
+        }
+
+        // Interaction
+        fireCanvas.addEventListener('click', (e) => {
+            createFirework(e.clientX, e.clientY);
+        });
+
+        // Start loops
+        window.onload = () => {
+            drawStars();
+            animate();
+        };
+
+    </script>
+</body>
+</html>
